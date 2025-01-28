@@ -1,5 +1,4 @@
 
-
 import time
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -16,14 +15,14 @@ workbook = Workbook()
 def init_driver():
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument("--headless")
+    # chrome_options.add_argument("--headless")
     driver = webdriver.Chrome(options=chrome_options)
     return driver
 
 # Opening the website
 def open_website(driver, url):
     driver.get(url)
-    driver.find_element(By.XPATH, '//*[@id="pushfree"]/div/div/div/div/div[2]/div[1]/a').click()
+    # driver.find_element(By.XPATH, '//*[@id="pushfree"]/div/div/div/div/div[2]/div[1]/a').click()
 
 # innitialising data record
 
@@ -71,9 +70,12 @@ def next_round(driver):
         time.sleep(10)
 
 def record_data(driver):
+    print('first test')
     current_url_record = driver.current_url
+    print('second test')
     id_record = match_id(current_url_record)
     try:
+        print('first try')
         element_time = WebDriverWait(driver, 1000).until(
             EC.presence_of_element_located((By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]/span'))
         )
@@ -82,45 +84,43 @@ def record_data(driver):
         return
 
     if element_time:
+        print('first if')
         time_match = driver.find_element(By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]/span').text
+        print('second if')
         match_time = convert_time(time_match)
+        print('third if')
         time_left = 600 - match_time
+        print('fourth if')
         interval = 30
         num_iterations = time_left // interval
-        team1 = driver.find_element(By.XPATH, '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[1]').text
-        team2 = driver.find_element(By.XPATH, '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[1]').text       
-
+        team1 = driver.find_element(By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[2]/div[1]/div[2]/div').text
+                                               
+        team2 = driver.find_element(By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[2]/div[3]/div[2]/div').text   
+                                                 
+        print('third test')
         xpath_value_dict = {
-            team1: {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[2]/i'
-            },
-            'Draw': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[2]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[2]/span[2]/i'
-            },
-            team2: {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[2]/i'
-            },
+          
             f'{team1} Score':{
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[1]',
+                'TeamXPath': f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[2]/div[1]/div[2]/div',
                 'ValueXPath': f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[3]/div[1]/table/tbody/tr[1]/td[2]'
             },
              f'{team2} Score':{
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[1]',
+                'TeamXPath': f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[2]/div[3]/div[2]/div',
                 'ValueXPath': f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[3]/div[1]/table/tbody/tr[3]/td[2]'
             },
              'Time':{
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[1]',
-                'ValueXPath': f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]'
+                'TeamXPath': f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[2]/div[3]/div[2]/div',
+                'ValueXPath': '//*[@id="allBetsTable"]/div',
+                # 'ValueXPath': f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]'
             }
        
+            
         }
-        header = ['Iteration', team1, 'Draw', team2,f'{team1} Score',f'{team2} Score','Time']
+        header = ['Iteration',f'{team1} Score',f'{team2} Score','Time']
 
         # Load the workbook and select the active sheet
         try:
+            print("opening excel")
             wb = openpyxl.load_workbook('recorded_data.xlsx')
             sheet = wb.active
         except FileNotFoundError:
@@ -128,12 +128,14 @@ def record_data(driver):
             sheet = wb.active
         new_sheet_name = f'{id_record}'
         if new_sheet_name in wb.sheetnames:
+            print("newsheetname")
             sheet = wb[new_sheet_name]
         else:
             sheet = wb.create_sheet(title=new_sheet_name)
         sheet.append(header)
    
         for i in range(num_iterations):
+            print("starting Iterations")
             time.sleep(7)
             print(f'{i} loop has started')
             values_dict = {}
@@ -143,6 +145,7 @@ def record_data(driver):
                     # Get the text of the elements using the XPaths
                     team_name = driver.find_element(By.XPATH, xpaths['TeamXPath']).text
                     value = driver.find_element(By.XPATH, xpaths['ValueXPath']).text
+                    print(value)
                     # Store the values in the values_dict
                     values_dict[team] = value
                 except Exception as e:
@@ -179,7 +182,7 @@ def recording(link, driver):
         id = match_id(current_url)
         path_first_half = f'//*[@id="{id}"]/div/div[1]/div/div[2]/div/div/div[1]/a'
         locator = (By.XPATH, path_first_half)
-        expected_text = '1 HALF'
+        expected_text = '1ST HALF'
         try:
             element = WebDriverWait(driver, 1000).until(
             EC.text_to_be_present_in_element(locator, expected_text))

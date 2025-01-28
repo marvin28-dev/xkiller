@@ -1,573 +1,168 @@
+import requests
 import time
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
-import re
-# This is to maximize the screen
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument("--start-maximized")
 
-# Innitializing the chrome browser
-driver = webdriver.Chrome(options=chrome_options)
+def Getting_Game_Id():
+    # Define the URL
+    _url = "https://ca.1xbet.com/service-api/LiveFeed/GetSportsShortZip?sports=85&champs=2665392&lng=en&gr=828&country=85&virtualSports=true&groupChamps=true"
 
-# Opening the website
-driver.get("https://1xbet.com/en/live/fifa/2665392-fc-24-3x3-international-masters-league")
+    # Send a GET request
+    response = requests.get(_url)
 
-# clicking on the turn notification on button
-driver.find_element(By.XPATH, '//*[@id="pushfree"]/div/div/div/div/div[2]/div[1]/a').click()
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            # List to store all the data from the loop
+            all_data = []
 
-# innitialising data record
+            # Loop through possible indices
+            for idx in [20, 21, 22, 23, 24, 25, 26, 27]:
+                try:
+                    for i in range(5):
+                        # Extract values
+                        Game_Id = data["Value"][idx]["L"][2]["G"][i]["I"]
+                        Score = data["Value"][idx]["L"][2]["G"][i]["SC"]["FS"]
+                        Time = data["Value"][idx]["L"][2]["G"][i]["SC"]["TS"]
 
-def find_element_text(driver, by, value):
-    try:
-        element = driver.find_element(by, value)
-        return element.text
-    except NoSuchElementException as e:
-        # print(f"Error in finding element with {by}: {value}")
+                        # Store values in a dictionary with a loop ID
+                        loop_data = {
+                            "loop_id": f"loop{i}",
+                            "Game_Id": Game_Id,
+                            "Score": Score,
+                            "Time": Time
+                        }
+                        all_data.append(loop_data)  # Append to the list
+                    break  # Exit loop if successful
+                except (IndexError, KeyError):  # Handle missing or invalid indices
+                    continue
+
+            # List to store data with empty scores
+            empty_score_data = []
+
+            # Check for entries with an empty Score
+            for entry in all_data:
+                if not entry["Score"]:  # If Score is empty or None
+                    empty_score_data.append({
+                        "loop_id": entry["loop_id"],
+                        "Game_Id": entry["Game_Id"],
+                        "Time": entry["Time"]
+                    })
+
+            if empty_score_data:
+                # Get the entry with the lowest Time
+                lowest_time_entry = min(
+                    empty_score_data,
+                    key=lambda x: int(x["Time"]) if isinstance(x["Time"], (str, int)) else float("inf")
+                )
+                # Return the corresponding Game_Id
+                return lowest_time_entry['Game_Id']
+            else:
+                print("No entries with an empty Score were found.")
+                return None
+
+        except Exception as e:
+            print(f"There was an error: {e}")
+            return None
+    else:
+        print("Failed to get data from the server.")
         return None
 
-def next_round():
-    time.sleep(100)
-    driver.execute_script("document.body.style.zoom = '100%'")
-    # Checking for match availability
-    for i in range(100):
-        print('Checking for match availability 2...')
+def Recording():
+    print("Started the Recording Phase")
+    response = requests.get(url)
+    if response.status_code == 200:
         try:
-            timings_2 = [
-            ('//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[1]/a'),
-            ('//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[1]/a'),
-            ('//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[1]/a'),
-            ('//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[1]/a'),
-            ('//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[1]/a'),
-            ]
-            
-            for timing_xpath_2, value_2 in timings_2:
-                timing_element_2 = driver.find_element(By.XPATH, timing_xpath_2).text
-                if ':' in timing_element_2:
-                    try:
-                        result_time_2 = convert_time(timing_element_2)
-                        if result_time_2 < 300:
-                            recording(value_2)
-                            
-                            
-                    except ValueError:
-                        print("invalid value")
+            data = response.json()
+            Team1 = data["Value"]["O1"]
+            Team2 = data["Value"]["O2"]
+            Time = int(data["Value"]["SC"]["TS"])
+            number_of_iterations = 20
+
+            value_dict = {
+                f'{Team1} Score': {
+                    'W1_Odd': data["Value"]["GE"][0]["E"][0][0]["C"]
+                },
+                f'{Team2} Score': {
+                    'W2_Odd': data["Value"]["GE"][0]["E"][2][0]["C"]
+                },
+                'X': {
+                    'X_Odd': data["Value"]["GE"][0]["E"][1][0]["C"]
+                },
+                'Time': {
+                    'Time': Time
+                }
+            }
+
+            print(value_dict)
+
+            for i in range(number_of_iterations):
+                if i == 0:
+                    sleep_time = Time + 40 if Time < 10 else Time + 30 # Sleep for Time left + 5 seconds in the first iteration
                 else:
-                    print("no available for recording")
-    
-            
-        except NoSuchElementException as e:
-            print("5th match not available yet")    
-        
-        time.sleep(10)
+                    sleep_time = 30  # Sleep for 28 seconds for subsequent iterations
 
-def record_data():
-    current_url_record = driver.current_url
-    id_record = match_id(current_url_record)
-    try:
-        element_time = WebDriverWait(driver, 1000).until(
-            EC.presence_of_element_located((By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]/span'))
-        )
-    except:
-        print('Error getting the time')
-    if element_time:
-        time_match=driver.find_element(By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]/span').text                      
-        match_time=convert_time(time_match)
-        time_left= 600 - match_time
-        interval = 30
-        num_iterations = time_left // interval
-        # Define a dictionary with XPaths for all the teams and their corresponding values
-        xpath_value_dict = {
-            'Win1': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[2]/i'
-            },
-            'Draw': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[2]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[2]/i'
-            },
-            'Win2': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[2]/i'
-            },
-             '1X': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[1]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[1]/span[2]/i'
-            },
-             '12': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[2]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[2]/span[2]/i'
-            },
-             '2X': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[3]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[3]/span[2]/i'
-            },
-            'Total_Over1': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[1]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[1]/span[2]/i'
-                              
-            },
-            'Total_Over2': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[3]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[3]/span[2]/i'
-            },
-            'Total_Over3': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[5]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[5]/span[2]/i'
-            },
-            'Total_Over4': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[7]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[7]/span[2]/i'
-            },
-            'Total_Under1': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[2]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[2]/span[2]/i'
-            },
-            'Total_Under2': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[4]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[4]/span[2]/i'
-            },
-            'Total_Under3': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[6]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[6]/span[2]/i'
-            },
-            'Total_Under4': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[8]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[8]/span[2]/i'
-            },
-            'Both_Score_Yes1': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[1]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[1]/span[2]/i'
-            },
-            'Both_Score_Yes2': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[3]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[3]/span[2]/i'
-            },
-            'Both_Score_Yes3': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[5]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[5]/span[1]'
-            },
-            'Both_Score_No1': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[2]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[2]/span[2]/i'
-            },
-            'Both_Score_No2': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[4]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[4]/span[2]/i'
-            },
-            'Both_Score_No3': {
-                'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[6]/span[1]',
-                'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[6]/span[2]/i'
-            },
+                print(f"Iteration {i+1}: Sleeping for {sleep_time} seconds...")
+                time.sleep(sleep_time)
 
-        }
+                response = requests.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    Time = int(data["Value"]["SC"]["TS"])
 
-        # Initialize an empty dictionary to store the values
-        values_dict = {}
+                    # Update value_dict with the new data
+                    value_dict = {
+                        f'{Team1} Score': {
+                            'W1_Odd': data["Value"]["GE"][0]["E"][0][0]["C"]
+                        },
+                        f'{Team2} Score': {
+                            'W2_Odd': data["Value"]["GE"][0]["E"][2][0]["C"]
+                        },
+                        'X': {
+                            'X_Odd': data["Value"]["GE"][0]["E"][1][0]["C"]
+                        },
+                        'Time': {
+                            'Time': Time
+                        }
+                    }
 
-        for i in range(num_iterations):
-            time.sleep(7)
-            print(f'{i} loop has started')
-            values_dict.clear()
-            # Iterate over the xpath_value_dict
-            for team, xpaths in xpath_value_dict.items():
-                try:
-                    # Get the text of the elements using the XPaths
-                    team_name = driver.find_element(By.XPATH, xpaths['TeamXPath']).text
-                    value = driver.find_element(By.XPATH, xpaths['ValueXPath']).text
-                    # Store the values in the values_dict
-                    values_dict[team_name] = value
-                except Exception as e:
-                    print('')
-            # Print the values for each team
-            for team, value in values_dict.items():
-                print(f'{team}: {value}')
-                    
-            
+                    print(value_dict)
 
-                
-            time.sleep(23)
-    next_round()
-    
+                    # Break the loop if the Time ever goes below 30 seconds
+                    if Time > 330:
+                        print("Time is less than 30 seconds. Breaking the loop.")
+                        break
+                else:
+                    print("Failed to fetch data during iteration.")
 
-        
-# Recording the Data
-def recording(link):
-    time.sleep(5)
-    print('Starting the recording phase')
-    try:
-        driver.find_element(By.XPATH, link).click()
-        driver.execute_script("document.body.style.zoom = '70%'")
-        current_url = driver.current_url
-        id = match_id(current_url)
-        path_first_half = f'//*[@id="{id}"]/div/div[1]/div/div[2]/div/div/div[1]/a'
-        locator = (By.XPATH, path_first_half)
-        expected_text = '1 HALF'
+        except Exception as e:
+            print("There is an error somewhere:", str(e))
+    else:
+        print("Failed to fetch data from the URL.")
+  
+
+def Record_Setup():
+    global url
+    ID_GAME = Getting_Game_Id()
+    url = f"https://ca.1xbet.com/service-api/LiveFeed/GetGameZip?id={ID_GAME}&lng=en&isSubGames=true&GroupEvents=true&countevents=250&grMode=4&topGroups=&country=85&marketType=1"
+    print(url)
+    response = requests.get(url)
+    if response.status_code == 200:
         try:
-            element = WebDriverWait(driver, 1000).until(
-            EC.text_to_be_present_in_element(locator, expected_text))
-        except:
-            print('fatal error waiting for 1st half')
-        if element:
-            print("your recording has started successfully")
-            record_data()
-    except:
-        print('little glitch')
-
-# Getting the match id
-def match_id(match_url):
-    value_url = match_url.split('/')[-1]
-    split_url = value_url.split("-")
-    extracted_id = split_url[0]
-    return extracted_id
-
-# Saving the data recorded in an excel sheet
-def save_data():
-    print("saving data recorded")
-    time.sleep(10)
-    driver.execute_script("document.body.style.zoom = '100%'")
-    time.sleep(10)
-
-
-# Converting time to seconds
-def convert_time(extracted_time):
-    minutes, seconds = map(int, extracted_time.split(':'))
-    time_seconds = minutes * 60 + seconds 
-    return time_seconds
-
-
-# Checking for match availability
-for i in range(100):
-    print('Checking for match availability...')
-    try:
-        timings = [                                                                                            
-        ('//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[1]/a'),
-        ('//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[1]/a'),
-        ('//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[1]/a'),
-        ('//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[1]/a'),
-        ('//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[1]/a'),
-        ]
-        
-        for timing_xpath, value in timings:
-            timing_element = driver.find_element(By.XPATH, timing_xpath).text
-            if ':' in timing_element:
-                try:
-                    result_time = convert_time(timing_element)
-                    if result_time < 300:
-                        recording(value)
-                        
-                        
-                except ValueError:
-                    print("invalid value")
-            else:
-                print("no available for recording")
-   
-         
-    except NoSuchElementException as e:
-        print("5th match not available yet")    
-
-    time.sleep(10)
-
-
-time.sleep(50)
-
-driver.quit()
-# The value with the lowest time should be pinned to the top
-# It should not be zoomed out
+            data = response.json()
+            Time=data["Value"]["SC"]["TS"]
+            for i in range(Time):
+                response = requests.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    Time = data["Value"]["SC"]["TS"]
+                    print(Time)
+                if Time < 32:
+                    Recording()
+                time.sleep(30)
+        except Exception as e:
+            print(f"there is an Error somewhere:{e}")
+Record_Setup()
 
 
 
 
 
-# import time
-# from selenium import webdriver
-# from selenium.webdriver.common.keys import Keys
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.common.action_chains import ActionChains
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.support import expected_conditions as EC
-# from selenium.common.exceptions import NoSuchElementException
-# import re
-
-# def init_driver():
-#     chrome_options = webdriver.ChromeOptions()
-#     chrome_options.add_argument("--start-maximized")
-#     driver = webdriver.Chrome(options=chrome_options)
-#     return driver
-
-# # Opening the website
-# def open_website(driver, url):
-#     driver.get(url)
-#     driver.find_element(By.XPATH, '//*[@id="pushfree"]/div/div/div/div/div[2]/div[1]/a').click()
-
-# # innitialising data record
-
-# def find_element_text(driver, by, value):
-#     try:
-#         element = driver.find_element(by, value)
-#         return element.text
-#     except NoSuchElementException as e:
-#         # print(f"Error in finding element with {by}: {value}")
-#         return None
-
-# def next_round(driver):
-#     time.sleep(100)
-#     driver.execute_script("document.body.style.zoom = '100%'")
-#     # Checking for match availability
-#     for i in range(100):
-#         print('Checking for match availability 2...')
-#         try:
-#             timings_2 = [
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[1]/a'),
-#             ]
-            
-#             for timing_xpath_2, value_2 in timings_2:
-#                 timing_element_2 = driver.find_element(By.XPATH, timing_xpath_2).text
-#                 if ':' in timing_element_2:
-#                     try:
-#                         result_time_2 = convert_time(timing_element_2)
-#                         if result_time_2 < 300:
-#                             recording(value_2)
-                            
-                            
-#                     except ValueError:
-#                         print("invalid value")
-#                 else:
-#                     print("no available for recording")
-    
-            
-#         except NoSuchElementException as e:
-#             print("5th match not available yet")    
-        
-#         time.sleep(10)
-
-# def record_data(driver):
-#     current_url_record = driver.current_url
-#     id_record = match_id(current_url_record)
-#     try:
-#         element_time = WebDriverWait(driver, 1000).until(
-#             EC.presence_of_element_located((By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]/span'))
-#         )
-#     except:
-#         print('Error getting the time')
-#     if element_time:
-#         time_match=driver.find_element(By.XPATH, f'//*[@id="{id_record}"]/div/div[1]/div/div[2]/div/div/div[1]/div[4]/span').text                      
-#         match_time=convert_time(time_match)
-#         time_left= 600 - match_time
-#         interval = 30
-#         num_iterations = time_left // interval
-#         # Define a dictionary with XPaths for all the teams and their corresponding values
-#         xpath_value_dict = {
-#             'Win1': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[1]/span[2]/i'
-#             },
-#             'Draw': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[2]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[2]/i'
-#             },
-#             'Win2': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[1]/div/div[2]/div[3]/span[2]/i'
-#             },
-#              '1X': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[1]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[1]/span[2]/i'
-#             },
-#              '12': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[2]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[2]/span[2]/i'
-#             },
-#              '2X': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[3]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[1]/div/div[2]/div[3]/span[2]/i'
-#             },
-#             'Total_Over1': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[1]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[1]/span[2]/i'
-                              
-#             },
-#             'Total_Over2': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[3]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[3]/span[2]/i'
-#             },
-#             'Total_Over3': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[5]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[5]/span[2]/i'
-#             },
-#             'Total_Over4': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[7]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[7]/span[2]/i'
-#             },
-#             'Total_Under1': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[2]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[2]/span[2]/i'
-#             },
-#             'Total_Under2': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[4]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[4]/span[2]/i'
-#             },
-#             'Total_Under3': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[6]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[6]/span[2]/i'
-#             },
-#             'Total_Under4': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[8]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[2]/div[2]/div/div[2]/div[8]/span[2]/i'
-#             },
-#             'Both_Score_Yes1': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[1]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[1]/span[2]/i'
-#             },
-#             'Both_Score_Yes2': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[3]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[3]/span[2]/i'
-#             },
-#             'Both_Score_Yes3': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[5]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[5]/span[1]'
-#             },
-#             'Both_Score_No1': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[2]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[2]/span[2]/i'
-#             },
-#             'Both_Score_No2': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[4]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[4]/span[2]/i'
-#             },
-#             'Both_Score_No3': {
-#                 'TeamXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[6]/span[1]',
-#                 'ValueXPath': '//*[@id="allBetsTable"]/div[1]/div[2]/div/div[2]/div[6]/span[2]/i'
-#             },
-
-#         }
-
-#         # Initialize an empty dictionary to store the values
-#         values_dict = {}
-
-#         for i in range(num_iterations):
-#             time.sleep(7)
-#             print(f'{i} loop has started')
-#             values_dict.clear()
-#             # Iterate over the xpath_value_dict
-#             for team, xpaths in xpath_value_dict.items():
-#                 try:
-#                     # Get the text of the elements using the XPaths
-#                     team_name = driver.find_element(By.XPATH, xpaths['TeamXPath']).text
-#                     value = driver.find_element(By.XPATH, xpaths['ValueXPath']).text
-#                     # Store the values in the values_dict
-#                     values_dict[team_name] = value
-#                 except Exception as e:
-#                     print('')
-#             # Print the values for each team
-#             for team, value in values_dict.items():
-#                 print(f'{team}: {value}')
-                    
-            
-
-                
-#             time.sleep(23)
-#     next_round(driver)
-    
-
-        
-# # Recording the Data
-# def recording(link, driver):
-#     time.sleep(5)
-#     print('Starting the recording phase')
-#     try:
-#         driver.find_element(By.XPATH, link).click()
-#         driver.execute_script("document.body.style.zoom = '70%'")
-#         current_url = driver.current_url
-#         id = match_id(current_url)
-#         path_first_half = f'//*[@id="{id}"]/div/div[1]/div/div[2]/div/div/div[1]/a'
-#         locator = (By.XPATH, path_first_half)
-#         expected_text = '1 HALF'
-#         try:
-#             element = WebDriverWait(driver, 1000).until(
-#             EC.text_to_be_present_in_element(locator, expected_text))
-#         except:
-#             print('fatal error waiting for 1st half')
-#         if element:
-#             print("your recording has started successfully")
-#             record_data(driver)
-#     except:
-#         print('little glitch')
-
-# # Getting the match id
-# def match_id(match_url):
-#     value_url = match_url.split('/')[-1]
-#     split_url = value_url.split("-")
-#     extracted_id = split_url[0]
-#     return extracted_id
-
-# # Saving the data recorded in an excel sheet
-# # def save_data():
-# #     print("saving data recorded")
-# #     time.sleep(10)
-# #     driver.execute_script("document.body.style.zoom = '100%'")
-# #     time.sleep(10)
-
-
-# # Converting time to seconds
-# def convert_time(extracted_time):
-#     minutes, seconds = map(int, extracted_time.split(':'))
-#     time_seconds = minutes * 60 + seconds 
-#     return time_seconds
-
-
-# # Checking for match availability
-# def check_availability(driver):
-#     for i in range(100):
-#         print('Checking for match availability...')
-#         try:
-#             timings = [                                                                                            
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[4]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[5]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[2]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div[1]/a'),
-#             ('//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[2]/div[1]/div[2]/span[2]','//*[@id="games_content"]/div/div[1]/div/div/div/div[6]/div/div[1]/div/div[1]/a'),
-#             ]
-            
-#             for timing_xpath, value in timings:
-#                 timing_element = driver.find_element(By.XPATH, timing_xpath).text
-#                 if ':' in timing_element:
-#                     try:
-#                         result_time = convert_time(timing_element)
-#                         if result_time < 300:
-#                             recording(value, driver)
-                            
-                            
-#                     except ValueError:
-#                         print("invalid value")
-#                 else:
-#                     print("no available for recording")
-    
-            
-#         except NoSuchElementException as e:
-#             print("5th match not available yet")    
-
-#         time.sleep(10)
-
-# def main():
-#     driver = init_driver()
-#     url = "https://1xbet.com/en/live/fifa/2665392-fc-24-3x3-international-masters-league"
-#     try:
-#         open_website(driver, url)
-#         check_availability(driver)
-#     finally:
-#         driver.quit()
-
-# if __name__ == "__main__":
-#     main()
-
-# # The value with the lowest time should be pinned to the top
-# # It should not be zoomed out
