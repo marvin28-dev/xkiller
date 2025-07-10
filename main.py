@@ -7,11 +7,13 @@ from datetime import datetime
 workbook = Workbook()
 
 def Getting_Game_Id():
+    print("getting game ID phase")
     # Define the URL
     _url = "https://ca.1xbet.com/service-api/LiveFeed/GetSportsShortZip?sports=85&champs=2665392&lng=en&gr=828&country=85&virtualSports=true&groupChamps=true"
 
     # Send a GET request
     response = requests.get(_url)
+   
 
     if response.status_code == 200:
         try:
@@ -19,13 +21,12 @@ def Getting_Game_Id():
             all_data = []
 
             # Loop through possible indices
-            for idx in [20, 21, 22, 23, 24, 25, 26, 27]:
+            for idx in [12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
                 try:
                     for i in range(5):
-                        Game_Id = data["Value"][idx]["L"][2]["G"][i]["I"]
-                        Score = data["Value"][idx]["L"][2]["G"][i]["SC"]["FS"]
-                        Time_val = data["Value"][idx]["L"][2]["G"][i]["SC"]["TS"]
-
+                        Game_Id = data["Value"][idx]["L"][4]["G"][i]["I"]
+                        Score = data["Value"][idx]["L"][4]["G"][i]["SC"]["FS"]
+                        Time_val = data["Value"][idx]["L"][4]["G"][i]["SC"]["TS"]
                         loop_data = {
                             "loop_id": f"loop{i}",
                             "Game_Id": Game_Id,
@@ -38,7 +39,7 @@ def Getting_Game_Id():
                     continue
 
             empty_score_data = []
-
+            
             for entry in all_data:
                 if not entry["Score"]:
                     empty_score_data.append({
@@ -46,6 +47,8 @@ def Getting_Game_Id():
                         "Game_Id": entry["Game_Id"],
                         "Time": entry["Time"]
                     })
+                    
+
 
             if empty_score_data:
                 lowest_time_entry = min(
