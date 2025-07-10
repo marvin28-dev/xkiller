@@ -9,7 +9,7 @@ workbook = Workbook()
 def Getting_Game_Id():
     print("getting game ID phase")
     # Define the URL
-    _url = "https://ca.1xbet.com/service-api/LiveFeed/GetSportsShortZip?sports=85&champs=2665392&lng=en&gr=828&country=85&virtualSports=true&groupChamps=true"
+    _url = "https://ca.1xbet.com/service-api/LiveFeed/GetSportsShortZip?sports=85&champs=2860561&lng=en&gr=828&country=85&virtualSports=true&groupChamps=true"
 
     # Send a GET request
     response = requests.get(_url)
@@ -24,9 +24,9 @@ def Getting_Game_Id():
             for idx in [12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
                 try:
                     for i in range(5):
-                        Game_Id = data["Value"][idx]["L"][4]["G"][i]["I"]
-                        Score = data["Value"][idx]["L"][4]["G"][i]["SC"]["FS"]
-                        Time_val = data["Value"][idx]["L"][4]["G"][i]["SC"]["TS"]
+                        Game_Id = data["Value"][idx]["L"][3]["G"][i]["I"]
+                        Score = data["Value"][idx]["L"][3]["G"][i]["SC"]["FS"]
+                        Time_val = data["Value"][idx]["L"][3]["G"][i]["SC"]["TS"]
                         loop_data = {
                             "loop_id": f"loop{i}",
                             "Game_Id": Game_Id,
