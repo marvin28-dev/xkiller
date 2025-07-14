@@ -71,7 +71,7 @@ def Recording():
     print("Started the Recording Phase")
     response = requests.get(url)
     ID_GAME = str(Getting_Game_Id())
-
+    
     if response.status_code == 200:
         try:
             data = response.json()
@@ -166,7 +166,7 @@ def Recording():
                     sheet.append(row)
                     wb.save("recorded_data.xlsx")
 
-                    if Time_val > 330:
+                    if Time_val > 300:
                         print("Time is more than 30 seconds, breaking the loop.")
                         Record_Setup()
                         break
